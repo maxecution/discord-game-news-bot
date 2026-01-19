@@ -27,8 +27,16 @@ jobs:
         env:
           DISCORD_NIGHTREIGN_WEBHOOK: ${{ secrets.DISCORD_NIGHTREIGN_WEBHOOK }}
 
-      - name: Commit state update
+      # Arc Raiders
+      - name: Check Arc Raiders news
+        run: node arc-raiders/check-news.js
+        env:
+          DISCORD_ARCRAIDERS_WEBHOOK: ${{ secrets.DISCORD_ARCRAIDERS_WEBHOOK }}
+
+      - name: Commit state updates
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: 'Update Nightreign last posted article'
-          file_pattern: 'nightreign/state.json'
+          commit_message: 'Update news state'
+          file_pattern: |
+            'nightreign/state.json'
+            'arc-raiders/state.json'

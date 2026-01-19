@@ -3,16 +3,17 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import { load } from 'cheerio';
 
-const NEWS_URL = 'https://en.bandainamcoent.eu/elden-ring/elden-ring-nightreign/news';
+const BASE_URL = 'https://arcraiders.com';
+const NEWS_URL = BASE_URL + '/news';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STATE_FILE = path.resolve(__dirname, 'state.json');
 
-const WEBHOOK = process.env.DISCORD_NIGHTREIGN_WEBHOOK;
+const WEBHOOK = process.env.DISCORD_ARCRAIDERS_WEBHOOK;
 
 if (!WEBHOOK) {
-  throw new Error('DISCORD_NIGHTREIGN_WEBHOOK is not set');
+  throw new Error('DISCORD_ARCRAIDERS_WEBHOOK is not set');
 }
 
 /* ---------------- State ---------------- */
@@ -52,6 +53,16 @@ function saveState(date, postedUrls) {
 
 /* ---------------- Scrape ---------------- */
 
+// Arc Raiders only exposes a date (no time), so parsing it as UTC midnight for consistency with Nightreign format
+function parseDate(text) {
+  // "January 13, 2026" → Date at 00:00:00 UTC
+  const date = new Date(`${text} UTC`);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid date: ${text}`);
+  }
+  return date;
+}
+
 async function getLatestNewsArticles() {
   const res = await fetch(NEWS_URL);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -59,19 +70,18 @@ async function getLatestNewsArticles() {
   const html = await res.text();
   const $ = load(html);
 
-  const section = $('h2#news').closest('div.search__section');
+  const section = $('div[class^="news-article-grid_newsArticleGrid"]');
   if (!section.length) throw new Error('News section not found');
-
-  const list = section.find('ul.cards-list').first();
-  if (!list.length) throw new Error('Cards list not found');
 
   const articles = [];
 
-  list.find('li.node__thumbnail').each((_, el) => {
+  section.find('a[class^="news-article-card_container"]').each((_, el) => {
     const card = $(el);
-    const title = card.find('h3.card__title').text().trim();
-    const url = card.find('a.card').attr('href');
-    const datetime = card.find('time').attr('datetime');
+    const title = card.find('div[class^="news-article-card_title"]').text().trim();
+    const href = card.attr('href');
+    if (!href) return;
+    const url = new URL(href, BASE_URL).href;
+    const datetime = parseDate(card.find('div[class^="news-article-card_date"]').text().trim());
 
     if (!title || !url || !datetime) return;
 
