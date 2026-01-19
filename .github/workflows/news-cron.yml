@@ -38,5 +38,5 @@ jobs:
         with:
           commit_message: 'Update news state'
           file_pattern: |
-            'nightreign/state.json'
-            'arc-raiders/state.json'
+            nightreign/state.json
+            arc-raiders/state.json
