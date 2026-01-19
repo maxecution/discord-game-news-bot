@@ -1,4 +1,4 @@
-# Game News → Discord Webhook
+# Game News > Discord Webhook
 
 This repository contains a set of lightweight scrapers that periodically check official game news pages and post **newly published articles** to Discord channels using **Discord webhooks**.
 
@@ -105,7 +105,7 @@ For each game/channel:
    - Copy the webhook URL
 
 2. In GitHub:
-   - Go to your repository → Settings → Secrets and variables → Actions
+   - Go to your repository > Settings > Secrets and variables > Actions
    - Add a repository secret:
      - Name: `DISCORD_<GAME>_WEBHOOK`
      - Value: the webhook URL
@@ -158,7 +158,7 @@ For each channel you want news posted to:
 
 In your forked repo:
 
-- Settings → Secrets and variables → Actions
+- Settings > Secrets and variables > Actions
 - Add secrets matching the scripts you intend to run
 
 Example:
@@ -171,10 +171,10 @@ DISCORD_NIGHTREIGN_WEBHOOK = https://discord.com/api/webhooks/...
 
 ### 4. (Optional) Adjust the schedule
 
-The default schedule is every 15 minutes:
+The default schedule is every hour at minute 0:
 
 ```yaml
-cron: '*/15 * * * *'
+cron: '0 * * * *'
 ```
 
 You can change this to hourly, daily, etc., depending on your needs.
@@ -187,6 +187,7 @@ GitHub Actions are disabled by default on forks.
 
 - Go to the **Actions** tab
 - Enable workflows
+- Additionally, grant the workflow read and write permissions under Setting > Actions > General
 
 ---
 
