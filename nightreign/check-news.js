@@ -17,20 +17,37 @@ if (!WEBHOOK) {
 
 /* ---------------- State ---------------- */
 
-function loadLastPublished() {
+function loadState() {
   if (!fs.existsSync(STATE_FILE)) return null;
 
   try {
     const raw = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
-    const date = raw.last_published ? new Date(raw.last_published) : null;
-    return date && !isNaN(date) ? date : null;
+
+    const lastPublished = raw.last_published ? new Date(raw.last_published) : null;
+
+    if (!lastPublished || isNaN(lastPublished)) return null;
+
+    return {
+      lastPublished,
+      postedUrls: Array.isArray(raw.posted_urls) ? raw.posted_urls : [],
+    };
   } catch {
     return null;
   }
 }
 
-function saveLastPublished(date) {
-  fs.writeFileSync(STATE_FILE, JSON.stringify({ last_published: date.toISOString() }, null, 2));
+function saveState(date, postedUrls) {
+  fs.writeFileSync(
+    STATE_FILE,
+    JSON.stringify(
+      {
+        last_published: date.toISOString(),
+        posted_urls: postedUrls,
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 /* ---------------- Scrape ---------------- */
@@ -71,20 +88,27 @@ async function getLatestNewsArticles() {
 /* ---------------- Delta logic ---------------- */
 
 async function getUnpostedArticles() {
-  const lastSeen = loadLastPublished();
+  const state = loadState();
   const articles = await getLatestNewsArticles();
 
-  if (!lastSeen) {
+  if (!state) {
     const newest = new Date(Math.max(...articles.map((a) => a.published)));
-    saveLastPublished(newest);
+    saveState(newest, []);
     return [];
   }
 
-  if (articles.length === 3 && Math.min(...articles.map((a) => a.published)) > lastSeen) {
-    console.warn('Exactly 3 articles all newer than last seen; older posts may have been missed.');
+  const { lastPublished, postedUrls } = state;
+  const unposted = [];
+
+  for (const article of articles) {
+    if (article.published > lastPublished) {
+      unposted.push(article);
+    } else if (article.published.getTime() === lastPublished.getTime() && !postedUrls.includes(article.url)) {
+      unposted.push(article);
+    }
   }
 
-  return articles.filter((a) => a.published > lastSeen).sort((a, b) => a.published - b.published);
+  return unposted.sort((a, b) => a.published - b.published);
 }
 
 /* ---------------- Discord webhook ---------------- */
@@ -123,7 +147,12 @@ async function postToDiscord(article) {
   }
 
   if (newArticles.length) {
-    const newest = new Date(Math.max(...newArticles.map((a) => a.published)));
-    saveLastPublished(newest);
+    const newestDate = new Date(Math.max(...newArticles.map((a) => a.published)));
+
+    const urlsAtNewestTimestamp = newArticles
+      .filter((a) => a.published.getTime() === newestDate.getTime())
+      .map((a) => a.url);
+
+    saveState(newestDate, urlsAtNewestTimestamp);
   }
 })();
