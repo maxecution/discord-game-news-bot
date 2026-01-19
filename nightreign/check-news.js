@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import * as cheerio from 'cheerio';
+import { load } from 'cheerio';
 
 const URL = 'https://en.bandainamcoent.eu/elden-ring/elden-ring-nightreign/news';
 
@@ -37,7 +37,7 @@ async function getLatestNewsArticles() {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
   const html = await res.text();
-  const $ = cheerio.load(html);
+  const $ = load(html);
 
   const section = $('h2#news').closest('div.search__section');
   if (!section.length) throw new Error('News section not found');
