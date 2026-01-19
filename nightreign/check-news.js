@@ -1,11 +1,14 @@
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import path from 'path';
 import { load } from 'cheerio';
 
 const URL = 'https://en.bandainamcoent.eu/elden-ring/elden-ring-nightreign/news';
 
-const __dirname = new URL('.', import.meta.url).pathname;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const STATE_FILE = path.resolve(__dirname, 'state.json');
+
 const WEBHOOK = process.env.DISCORD_NIGHTREIGN_WEBHOOK;
 
 if (!WEBHOOK) {
