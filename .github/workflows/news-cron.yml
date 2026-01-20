@@ -37,6 +37,4 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: 'Update news state'
-          file_pattern: |
-            nightreign/state.json
-            arc-raiders/state.json
+          file_pattern: '**/state.json'
