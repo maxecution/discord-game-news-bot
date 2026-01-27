@@ -63,9 +63,48 @@ function parseDate(text) {
   return date;
 }
 
+async function fetchWithRetry(url, options, maxAttempts = 3) {
+  let res = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      res = await fetch(url, options);
+
+      if (res.ok) return res;
+
+      console.warn(`Fetch attempt ${attempt} blocked: HTTP ${res.status}`);
+    } catch (err) {
+      console.warn(`Fetch attempt ${attempt} failed `, err.message);
+    }
+
+    if (attempt < maxAttempts) {
+      const delay = 2000 * attempt;
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+
+  return null;
+}
+
 async function getLatestNewsArticles() {
-  const res = await fetch(NEWS_URL);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const res = await fetchWithRetry(
+    NEWS_URL,
+    {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+          '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    },
+    3,
+  );
+
+  if (!res) {
+    console.warn('Arc Raiders fetch abandoned after retries');
+    return [];
+  }
 
   const html = await res.text();
   const $ = load(html);
