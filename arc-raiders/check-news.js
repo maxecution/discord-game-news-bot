@@ -1,8 +1,8 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { load } from 'cheerio';
-import { runNewsScraper } from './utils/runner.js';
-import { fetchWithRetry } from './utils/http.js';
+import { runNewsScraper } from '../utils/runner.js';
+import { fetchWithRetry } from '../utils/http.js';
 
 const BASE_URL = 'https://arcraiders.com';
 const NEWS_URL = `${BASE_URL}/news`;

@@ -2,8 +2,8 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { load } from 'cheerio';
-import { runNewsScraper } from './utils/runner.js';
-import { fetchWithRetry } from './utils/http.js';
+import { runNewsScraper } from '../utils/runner.js';
+import { fetchWithRetry } from '../utils/http.js';
 
 const NEWS_URL = 'https://en.bandainamcoent.eu/elden-ring/elden-ring-nightreign/news';
 const WEBHOOK = process.env.DISCORD_NIGHTREIGN_WEBHOOK;
