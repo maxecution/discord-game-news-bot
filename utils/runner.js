@@ -25,10 +25,17 @@ export async function runNewsScraper({
     const seen = new Set();
     const unique = articles.filter((a) => {
       if (!a?.url || !a?.published) return false;
+      const t = a.published?.getTime?.();
+      if (typeof t !== 'number' || Number.isNaN(t)) return false;
       if (seen.has(a.url)) return false;
       seen.add(a.url);
       return true;
     });
+
+    if (!unique.length) {
+      logger.warn(`${name}: All scraped items were invalid or duplicates; state not initialised.`);
+      return;
+    }
 
     if (!state) {
       if (bootstrapStrategy === 'post') {
@@ -51,18 +58,24 @@ export async function runNewsScraper({
             successfullyPosted,
           );
           saveState(stateFile, newState.lastPublished, newState.postedUrls);
-          logger.log(`${name}: State initialised (post-all bootstrap).`);
+          logger.log(`${name}: State initialised (bootstrap = post).`);
         } else {
-          // Fall back to skip if nothing posted
-          const newest = new Date(Math.max(...unique.map((a) => a.published.getTime())));
-          saveState(stateFile, newest, []);
-          logger.log(`${name}: State initialised. No articles posted.`);
+          // No successful posts > do not initialise state
+          logger.warn(
+            `${name}: Bootstrap 'post' made 0 successful posts. State not initialised; will retry on next run.`,
+          );
         }
         return;
       } else {
-        const newest = new Date(Math.max(...unique.map((a) => a.published.getTime())));
-        saveState(stateFile, newest, []);
-        logger.log(`${name}: State initialised. No articles posted.`);
+        // 'skip' > initialise with newest timestamp AND URLs at that timestamp
+        const newestDate = new Date(Math.max(...unique.map((a) => a.published.getTime())));
+
+        const urlsAtNewestTimestamp = unique
+          .filter((a) => a.published.getTime() === newestDate.getTime())
+          .map((a) => a.url);
+
+        saveState(stateFile, newestDate, urlsAtNewestTimestamp);
+        logger.log(`${name}: State initialised (bootstrap = skip). No articles posted.`);
         return;
       }
     }
