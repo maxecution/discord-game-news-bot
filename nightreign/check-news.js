@@ -1,61 +1,23 @@
-import fs from 'fs';
+// check-news-nightreign.js
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { load } from 'cheerio';
+import { runNewsScraper } from './utils/runner.js';
+import { fetchWithRetry } from './utils/http.js';
 
 const NEWS_URL = 'https://en.bandainamcoent.eu/elden-ring/elden-ring-nightreign/news';
+const WEBHOOK = process.env.DISCORD_NIGHTREIGN_WEBHOOK;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STATE_FILE = path.resolve(__dirname, 'state.json');
 
-const WEBHOOK = process.env.DISCORD_NIGHTREIGN_WEBHOOK;
-
-if (!WEBHOOK) {
-  throw new Error('DISCORD_NIGHTREIGN_WEBHOOK is not set');
-}
-
-/* ---------------- State ---------------- */
-
-function loadState() {
-  if (!fs.existsSync(STATE_FILE)) return null;
-
-  try {
-    const raw = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
-
-    const lastPublished = raw.last_published ? new Date(raw.last_published) : null;
-
-    if (!lastPublished || isNaN(lastPublished)) return null;
-
-    return {
-      lastPublished,
-      postedUrls: Array.isArray(raw.posted_urls) ? raw.posted_urls : [],
-    };
-  } catch {
-    return null;
+async function fetchArticles() {
+  const res = await fetchWithRetry(NEWS_URL);
+  if (!res) {
+    console.warn('Nightreign fetch abandoned after retries');
+    return [];
   }
-}
-
-function saveState(date, postedUrls) {
-  fs.writeFileSync(
-    STATE_FILE,
-    JSON.stringify(
-      {
-        last_published: date.toISOString(),
-        posted_urls: postedUrls,
-      },
-      null,
-      2,
-    ),
-  );
-}
-
-/* ---------------- Scrape ---------------- */
-
-async function getLatestNewsArticles() {
-  const res = await fetch(NEWS_URL);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
   const html = await res.text();
   const $ = load(html);
 
@@ -66,7 +28,6 @@ async function getLatestNewsArticles() {
   if (!list.length) throw new Error('Cards list not found');
 
   const articles = [];
-
   list.find('li.node__thumbnail').each((_, el) => {
     const card = $(el);
     const title = card.find('h3.card__title').text().trim();
@@ -75,84 +36,26 @@ async function getLatestNewsArticles() {
 
     if (!title || !url || !datetime) return;
 
-    articles.push({
-      title,
-      url,
-      published: new Date(datetime),
-    });
+    const published = new Date(datetime);
+    if (Number.isNaN(published.getTime())) return;
+
+    articles.push({ title, url, published });
   });
 
   return articles;
 }
 
-/* ---------------- Delta logic ---------------- */
-
-async function getUnpostedArticles() {
-  const state = loadState();
-  const articles = await getLatestNewsArticles();
-
-  if (!state) {
-    const newest = new Date(Math.max(...articles.map((a) => a.published)));
-    saveState(newest, []);
-    return [];
-  }
-
-  const { lastPublished, postedUrls } = state;
-  const unposted = [];
-
-  for (const article of articles) {
-    if (article.published > lastPublished) {
-      unposted.push(article);
-    } else if (article.published.getTime() === lastPublished.getTime() && !postedUrls.includes(article.url)) {
-      unposted.push(article);
-    }
-  }
-
-  return unposted.sort((a, b) => a.published - b.published);
-}
-
-/* ---------------- Discord webhook ---------------- */
-
-async function postToDiscord(article, retries = 3) {
-  const res = await fetch(WEBHOOK, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      content: `**${article.title}**\n${article.url}`,
-    }),
-  });
-
-  if (res.status === 429 && retries > 0) {
-    const retryAfter = Number(res.headers.get('Retry-After')) || 5;
-    await new Promise((r) => setTimeout(r, retryAfter * 1000));
-    return postToDiscord(article, retries - 1);
-  }
-
-  if (!res.ok) {
-    throw new Error(`Discord webhook failed: ${res.status}`);
-  }
-}
-
-/* ---------------- Main ---------------- */
-
 (async () => {
-  const newArticles = await getUnpostedArticles();
-
-  for (const article of newArticles) {
-    try {
-      await postToDiscord(article);
-    } catch (err) {
-      console.error(`Failed to post: ${article.title}`, err);
-    }
-  }
-
-  if (newArticles.length) {
-    const newestDate = new Date(Math.max(...newArticles.map((a) => a.published)));
-
-    const urlsAtNewestTimestamp = newArticles
-      .filter((a) => a.published.getTime() === newestDate.getTime())
-      .map((a) => a.url);
-
-    saveState(newestDate, urlsAtNewestTimestamp);
+  try {
+    await runNewsScraper({
+      name: 'Nightreign',
+      fetchArticles,
+      webhook: WEBHOOK,
+      stateFile: STATE_FILE,
+      rateLimit: { minMs: 250, maxMs: 750 },
+    });
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
   }
 })();
