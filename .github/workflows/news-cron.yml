@@ -19,18 +19,12 @@ jobs:
         with:
           node-version: '20'
 
-      - run: npm install
+      - run: npm ci
 
-      # Nightreign
-      - name: Check Nightreign news
-        run: node nightreign/check-news.js
+      - name: Run all scrapers
+        run: node sites/execution.js
         env:
           DISCORD_NIGHTREIGN_WEBHOOK: ${{ secrets.DISCORD_NIGHTREIGN_WEBHOOK }}
-
-      # Arc Raiders
-      - name: Check Arc Raiders news
-        run: node arc-raiders/check-news.js
-        env:
           DISCORD_ARCRAIDERS_WEBHOOK: ${{ secrets.DISCORD_ARCRAIDERS_WEBHOOK }}
 
       - name: Commit state updates
