@@ -12,9 +12,9 @@ export async function fetchWithRetry(url, attempts = 3) {
       const res = await fetch(url, { headers });
       if (res.ok) return res;
 
-      console.warn(`Fetch attempt ${attempt} failed: HTTP ${res.status}`);
+      console.warn(`${url} fetch attempt ${attempt} failed: HTTP ${res.status}`);
     } catch (err) {
-      console.warn(`Fetch attempt ${attempt} errored:`, err.message);
+      console.warn(`${url} fetch attempt ${attempt} errored:`, err.message);
     }
 
     if (attempt < attempts) {
