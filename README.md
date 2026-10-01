@@ -16,14 +16,14 @@ The system is designed to:
 
 At a high level:
 
-1.  A GitHub Actions workflow runs on a cron schedule
-2.  A single **execution script** runs all configured game scrapers
-3.  For each game:
-    - the game’s official news page is fetched
-    - the most recent articles are extracted
-    - they are compared against a locally stored state file
-    - **only newly published articles** are posted to Discord via a webhook
-4.  Updated state files are committed back to the repository so the next run knows what was already posted
+1. A GitHub Actions workflow runs on a cron schedule
+2. A single **execution script** runs all configured game scrapers
+3. For each game:
+   - the game’s official news page is fetched
+   - the most recent articles are extracted
+   - they are compared against a locally stored state file
+   - **only newly published articles** are posted to Discord via a webhook
+4. Updated state files are committed back to the repository so the next run knows what was already posted
 
 Each game is logically isolated:
 
@@ -114,16 +114,16 @@ This project uses **Discord webhooks**, not a logged-in bot.
 
 For each game/channel:
 
-1.  In Discord:
-    - Open the channel settings
-    - Create a webhook
-    - Copy the webhook URL
+1. In Discord:
+   - Open the channel settings
+   - Create a webhook
+   - Copy the webhook URL
 
-2.  In GitHub:
-    - Go to your repository > Settings > Secrets and variables > Actions
-    - Add a repository secret:
-      - Name: `DISCORD_<GAME>_WEBHOOK`
-      - Value: the webhook URL
+2. In GitHub:
+   - Go to your repository > Settings > Secrets and variables > Actions
+   - Add a repository secret:
+     - Name: `DISCORD_<GAME>_WEBHOOK`
+     - Value: the webhook URL
 
 Example:
 
