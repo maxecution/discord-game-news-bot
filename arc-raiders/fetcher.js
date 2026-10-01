@@ -20,17 +20,17 @@ export async function fetchArticles() {
   const html = await res.text();
   const $ = load(html);
 
-  const section = $('div[class^="news-article-grid_newsArticleGrid"]');
+  const section = $('section[class^="news-article-list_section"]');
   if (!section.length) throw new Error('News section not found');
 
   const articles = [];
-  section.find('a[class^="news-article-card_container"]').each((_, el) => {
-    const card = $(el);
-    const title = card.find('div[class^="news-article-card_title"]').text().trim();
-    const href = card.attr('href');
+  section.find('a[class^="news-article-row_row"]').each((_, el) => {
+    const row = $(el);
+    const title = row.find('[class^="news-article-row_title"]').text().trim();
+    const href = row.attr('href');
     if (!href) return;
     const url = new URL(href, BASE_URL).href;
-    const dateText = card.find('div[class^="news-article-card_date"]').text().trim();
+    const dateText = row.find('[class^="news-article-row_date"]').text().trim();
     const published = parseDate(dateText);
     articles.push({ title, url, published });
   });
